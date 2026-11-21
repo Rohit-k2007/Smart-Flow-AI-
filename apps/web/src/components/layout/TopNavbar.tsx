@@ -17,7 +17,7 @@ export function TopNavbar({ onMenu }: { onMenu: () => void }) {
   const [backendSimulation, setBackendSimulation] = useState<string>('checking')
   const { theme, toggleTheme } = useTheme()
   const { status } = useSimulation()
-  const { configured, user, signOut } = useAuth()
+  const { configured, mfaStatus, user, signOut } = useAuth()
   const [profileError, setProfileError] = useState('')
   useEffect(() => {
     let active = true
@@ -146,7 +146,9 @@ export function TopNavbar({ onMenu }: { onMenu: () => void }) {
           <div className="avatar">{user?.email?.slice(0, 2).toUpperCase() ?? 'OP'}</div>
           <div className="profile-copy">
             <strong>{user?.user_metadata.name ?? user?.email ?? 'Public user'}</strong>
-            <span>{user ? 'Signed in' : 'Guest access'}</span>
+            <span>{user
+              ? mfaStatus === 'required' ? 'MFA verification required' : mfaStatus === 'checking' ? 'Checking MFA' : mfaStatus === 'unavailable' ? 'MFA status unavailable' : 'Signed in'
+              : 'Guest access'}</span>
           </div>
           <ChevronDown size={16} />
         </button>
@@ -154,8 +156,11 @@ export function TopNavbar({ onMenu }: { onMenu: () => void }) {
           <strong>{openMenu === 'notifications' ? 'Notifications' : 'Workspace profile'}</strong>
           <p>{openMenu === 'notifications'
             ? 'No connected backend notifications.'
-            : user?.email ?? (configured ? 'Public access · sign in to save preferences.' : 'Public access · account features are not configured.')}</p>
+            : user && mfaStatus === 'required'
+              ? `${user.email ?? 'Account'} · complete TOTP verification. Public dashboard access remains available.`
+              : user?.email ?? (configured ? 'Public access · sign in to save preferences.' : 'Public access · account features are not configured.')}</p>
           {profileError && <p role="alert">{profileError}</p>}
+          {openMenu === 'profile' && user && mfaStatus === 'required' && <Link to="/login" onClick={() => setOpenMenu(null)}>Complete 2FA verification</Link>}
           {openMenu === 'profile' && user
             ? <button onClick={() => { void signOut().then((result) => { if (result.error) setProfileError(result.error); else { setProfileError(''); setOpenMenu(null) } }).catch(() => setProfileError('Sign-out is unavailable; try again when account services recover.')) }}>Sign out</button>
             : openMenu === 'profile' && configured

@@ -9,6 +9,7 @@ import { useTheme } from '../contexts/useTheme'
 import { useSimulation } from '../contexts/useSimulation'
 import { useLiveTraffic } from '../contexts/useLiveTraffic'
 import { useAuth } from '../contexts/useAuth'
+import { TwoFactorSettings } from '../components/security/TwoFactorSettings'
 import { demoTrafficSample } from '../data/demo-traffic'
 import { defaultUserPreferences, loadUserPreferences, saveUserPreferences, type UserPreferences } from '../services/preferences'
 import { api } from '../services/api'
@@ -467,6 +468,7 @@ export function SettingsPage() {
       <Panel title="Simulation preferences"><label className="field-label">Default scenario<select value={scenario} onChange={(e) => setScenario(e.target.value)}><option>Normal Traffic</option><option>Heavy Traffic</option><option>Emergency Traffic</option></select></label><label className="field-label">Default controller<select value={controller} onChange={(e) => setController(e.target.value)}><option>Adaptive AI</option><option>Fixed-Time</option></select></label><label className="check-field"><input type="checkbox" checked={showDirectionLabels} onChange={(e) => setShowDirectionLabels(e.target.checked)} /> Show vehicle direction labels</label></Panel>
       <Panel title="System information"><div className="readout-grid"><span>Frontend version</span><strong>0.0.0 · development</strong><span>Backend connection</span><strong><StatusBadge>Not checked</StatusBadge></strong><span>API configuration</span><strong>{import.meta.env.VITE_API_URL ? 'URL configured' : 'Default URL'}</strong><span>Secrets</span><strong>Not displayed</strong></div></Panel>
     </div>
+    <TwoFactorSettings />
     <div className="settings-save"><span>{saved ? <><Check size={16} /> {user ? 'Preferences saved to your account.' : 'Preferences saved in this browser.'}</> : user ? 'Account preferences use Supabase row-level security.' : 'Sign in to sync preferences across devices.'}</span><Button onClick={() => void savePreferences()} disabled={saving || preferencesLoading}>{saving ? 'Saving…' : 'Save preferences'}</Button></div>
   </>
 }
