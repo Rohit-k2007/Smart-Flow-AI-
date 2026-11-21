@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { MapContainer, Polyline, Popup, TileLayer } from 'react-leaflet'
 import { Card } from '../common/UI'
 import type { TrafficFlowItem } from '../../types/api'
@@ -50,7 +51,9 @@ function jamColor(jamFactor: number | null): string {
   return '#48c78e'
 }
 
-export function TrafficMapPanel({ items }: { items: TrafficFlowItem[] }) {
+export function TrafficMapPanel({ items, loading = false }: { items: TrafficFlowItem[]; loading?: boolean }) {
+  const [tilesUnavailable, setTilesUnavailable] = useState(false)
+
   return (
     <Card className="data-panel">
       <div className="panel-title">HERE road segment flow · Jaipur</div>
@@ -58,6 +61,10 @@ export function TrafficMapPanel({ items }: { items: TrafficFlowItem[] }) {
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          eventHandlers={{
+            load: () => setTilesUnavailable(false),
+            tileerror: () => setTilesUnavailable(true),
+          }}
         />
         {items.flatMap((item, index) => lineCoordinates(item.road_geometry).map((line, lineIndex) => (
           <Polyline
@@ -75,6 +82,8 @@ export function TrafficMapPanel({ items }: { items: TrafficFlowItem[] }) {
           </Polyline>
         )))}
       </MapContainer>
+      {tilesUnavailable && <p className="mini-callout" role="alert">Map tiles are unavailable. HERE traffic overlays are separate and will appear only when provider geometry is available.</p>}
+      {!loading && items.length === 0 && <p className="mini-callout" role="status">No HERE road geometry is available; no live traffic overlay is shown.</p>}
       <div className="map-legend">
         <span><i className="low" />Jam 0–3.9</span><span><i className="medium" />Jam 4–6.9</span><span><i className="high" />Jam 7–10</span>
         <span>No HERE geometry: {items.filter((item) => lineCoordinates(item.road_geometry).length === 0).length}</span>

@@ -3,13 +3,20 @@ import { ThemeContext, type Theme } from './theme-context'
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('smartflow-theme')
-    return saved === 'light' ? 'light' : 'dark'
+    try {
+      return localStorage.getItem('smartflow-theme') === 'light' ? 'light' : 'dark'
+    } catch {
+      return 'dark'
+    }
   })
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    localStorage.setItem('smartflow-theme', theme)
+    try {
+      localStorage.setItem('smartflow-theme', theme)
+    } catch {
+      console.warn('The theme preference could not be saved in this browser.')
+    }
   }, [theme])
 
   return (

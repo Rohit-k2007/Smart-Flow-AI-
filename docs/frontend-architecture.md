@@ -17,7 +17,7 @@ flowchart LR
     UI -->|WebSocket| Backend
     Backend --> HERE[HERE Traffic API v7]
     Auth[Supabase Auth and RLS] --> UI
-    Backend -. optional persistence .-> DB[Supabase PostgreSQL]
+    Backend -. optional persistence .-> DB[Neon PostgreSQL]
     Backend -. not configured .-> SUMO[SUMO and TraCI]
     Backend -. not configured .-> AI[Adaptive signal controller]
 ```
@@ -47,7 +47,7 @@ Supabase Auth is initialized only when `VITE_SUPABASE_URL` and
 `VITE_SUPABASE_ANON_KEY` are set. The anonymous key is public and all user
 preference operations rely on PostgreSQL RLS. Signup, login, reset, and logout
 use Supabase Auth. Profiles are read only by their owner. Server service-role
-credentials are never included in the frontend.
+credentials and the Neon `DATABASE_URL` are never included in the frontend.
 
 ## Live traffic
 

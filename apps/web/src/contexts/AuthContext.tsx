@@ -15,6 +15,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) console.error('Unable to restore the Supabase session.', error.message)
       setSession(data.session)
       setLoading(false)
+    }).catch(() => {
+      if (!active) return
+      setSession(null)
+      setLoading(false)
+      console.warn('The optional account session is unavailable; public prototype access remains enabled.')
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession)

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { Component, lazy, Suspense, type ReactNode } from 'react'
 import { ArrowRight, BrainCircuit, MapPin, ShieldCheck, TrafficCone, Waypoints } from 'lucide-react'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { Button, Card } from './components/common/UI'
@@ -26,7 +26,7 @@ function LandingPage() {
         <div className="landing-links">
           <a href="#platform">Platform</a>
           <a href="#capabilities">Capabilities</a>
-          <Link to="/login">Sign in</Link>
+          <Link to="/login">Optional sign-in</Link>
           <Link className="landing-cta" to="/dashboard">Open workspace</Link>
         </div>
       </nav>
@@ -55,10 +55,10 @@ function LandingPage() {
               <div className="flow-path" />
             </div>
             <div className="signal-footer">
-              <div><span>Workspace state</span><strong><i /> Demo mode</strong></div>
+              <div><span>Workspace state</span><strong><i /> Prototype mode</strong></div>
               <div><span>Controller preview</span><strong>Adaptive · not connected</strong></div>
             </div>
-            <DemoText />
+            <SampleDataNote />
           </Card>
         </section>
         <section className="capabilities" id="capabilities">
@@ -83,8 +83,8 @@ function LandingPage() {
           </div>
         </section>
         <section className="landing-section preview-section" id="simulation-preview">
-          <div className="section-heading"><span className="eyebrow">Simulation preview</span><h2>A safer way to explore traffic flow.</h2><p>Interactive frontend demonstrations make traffic scenarios easy to inspect before a simulation backend is connected.</p></div>
-          <Card className="preview-card"><div className="preview-junction"><span>DEMO</span><i /><i /><i /><i /><b>+</b></div><div><DemoText /><h3>Visualize approaches and signal phases</h3><p>See directional queues, vehicle categories, and signal state in an illustrative four-way junction.</p><Link to="/simulation">Open simulation <ArrowRight size={15} /></Link></div></Card>
+          <div className="section-heading"><span className="eyebrow">Simulation preview</span><h2>A safer way to explore traffic flow.</h2><p>Interactive prototypes make traffic scenarios easy to inspect before a simulation backend is connected.</p></div>
+          <Card className="preview-card"><div className="preview-junction"><span>SAMPLE</span><i /><i /><i /><i /><b>+</b></div><div><SampleDataNote /><h3>Visualize approaches and signal phases</h3><p>See directional queues, vehicle categories, and signal state in an illustrative four-way junction.</p><Link to="/simulation">Open simulation <ArrowRight size={15} /></Link></div></Card>
         </section>
         <section className="landing-section landing-highlight">
           <div className="section-heading"><span className="eyebrow">Designed for the next step</span><h2>Adaptive traffic management, prepared for integration.</h2><p>Frontend capabilities are ready to connect with a FastAPI service, SUMO/TraCI simulation, and future model outputs. No live control is implied here.</p></div>
@@ -100,12 +100,12 @@ function LandingPage() {
         </section>
         <section className="landing-cta-section"><h2>Explore the SmartFlow workspace</h2><p>Move from overview to traffic operations in one click.</p><Link to="/dashboard"><Button>Explore Dashboard <ArrowRight size={16} /></Button></Link></section>
       </main>
-      <footer className="landing-footer"><Link className="landing-brand" to="/"><div className="brand-mark">S</div><div><strong>SmartFlow</strong><span>AI</span></div></Link><span>Smarter Signals. Faster Movement. Safer Roads.</span><span>Frontend demonstration · Not connected to live traffic</span></footer>
+      <footer className="landing-footer"><Link className="landing-brand" to="/"><div className="brand-mark">S</div><div><strong>SmartFlow</strong><span>AI</span></div></Link><span>Smarter Signals. Faster Movement. Safer Roads.</span><span>Frontend prototype · Not connected to live traffic</span></footer>
     </div>
   )
 }
 
-function DemoText() { return <span className="demo-label">FRONTEND DEMO · NOT LIVE</span> }
+function SampleDataNote() { return <span className="demo-label">Sample traffic data — illustrative values, not live measurements.</span> }
 
 function NotFoundPage() {
   return (
@@ -126,24 +126,55 @@ function ShellPage({ children }: { children: React.ReactNode }) {
   )
 }
 
+function RouteLoading() {
+  return <div className="page-loading" role="status" aria-live="polite">Loading page…</div>
+}
+
+class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <main className="not-found" role="alert">
+          <span>!</span>
+          <h1>This view could not be loaded</h1>
+          <p>Refresh the app or return to the dashboard. No live traffic or database data was changed.</p>
+          <div className="not-found-actions">
+            <Button onClick={() => window.location.reload()}>Reload app</Button>
+            <Button variant="secondary" onClick={() => window.location.assign('/dashboard')}>Dashboard</Button>
+          </div>
+        </main>
+      )
+    }
+    return this.props.children
+  }
+}
+
 export default function App() {
   return (
-    <Routes>
+    <AppErrorBoundary>
+      <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<AuthPage mode="login" />} />
       <Route path="/signup" element={<AuthPage mode="signup" />} />
       <Route path="/forgot-password" element={<AuthPage mode="forgot" />} />
-      <Route path="/dashboard" element={<ShellPage><Suspense fallback={<div className="page-loading" />}><DashboardPage /></Suspense></ShellPage>} />
-      <Route path="/simulation" element={<ShellPage><Suspense fallback={<div className="page-loading" />}><SimulationPage /></Suspense></ShellPage>} />
-      <Route path="/ai-control" element={<ShellPage><Suspense fallback={<div className="page-loading" />}><AIControlPage /></Suspense></ShellPage>} />
-      <Route path="/emergency" element={<ShellPage><Suspense fallback={<div className="page-loading" />}><EmergencyPage /></Suspense></ShellPage>} />
-      <Route path="/heatmap" element={<ShellPage><Suspense fallback={<div className="page-loading" />}><HeatmapPage /></Suspense></ShellPage>} />
-      <Route path="/prediction" element={<ShellPage><Suspense fallback={<div className="page-loading" />}><PredictionPage /></Suspense></ShellPage>} />
-      <Route path="/analytics" element={<ShellPage><Suspense fallback={<div className="page-loading" />}><AnalyticsPage /></Suspense></ShellPage>} />
-      <Route path="/history" element={<ShellPage><Suspense fallback={<div className="page-loading" />}><HistoryPage /></Suspense></ShellPage>} />
-      <Route path="/settings" element={<ShellPage><Suspense fallback={<div className="page-loading" />}><SettingsPage /></Suspense></ShellPage>} />
+      <Route path="/dashboard" element={<ShellPage><Suspense fallback={<RouteLoading />}><DashboardPage /></Suspense></ShellPage>} />
+      <Route path="/simulation" element={<ShellPage><Suspense fallback={<RouteLoading />}><SimulationPage /></Suspense></ShellPage>} />
+      <Route path="/ai-control" element={<ShellPage><Suspense fallback={<RouteLoading />}><AIControlPage /></Suspense></ShellPage>} />
+      <Route path="/emergency" element={<ShellPage><Suspense fallback={<RouteLoading />}><EmergencyPage /></Suspense></ShellPage>} />
+      <Route path="/heatmap" element={<ShellPage><Suspense fallback={<RouteLoading />}><HeatmapPage /></Suspense></ShellPage>} />
+      <Route path="/prediction" element={<ShellPage><Suspense fallback={<RouteLoading />}><PredictionPage /></Suspense></ShellPage>} />
+      <Route path="/analytics" element={<ShellPage><Suspense fallback={<RouteLoading />}><AnalyticsPage /></Suspense></ShellPage>} />
+      <Route path="/history" element={<ShellPage><Suspense fallback={<RouteLoading />}><HistoryPage /></Suspense></ShellPage>} />
+      <Route path="/settings" element={<ShellPage><Suspense fallback={<RouteLoading />}><SettingsPage /></Suspense></ShellPage>} />
       <Route path="/404" element={<NotFoundPage />} />
       <Route path="*" element={<Navigate to="/404" replace />} />
-    </Routes>
+      </Routes>
+    </AppErrorBoundary>
   )
 }

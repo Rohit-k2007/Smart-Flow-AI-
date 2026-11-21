@@ -73,17 +73,23 @@ def test_emergency_requests_are_not_reported_as_detected_or_applied() -> None:
     assert "no vehicle detection" in response.json()["message"]
 
 
-def test_cors_allows_configured_local_frontend() -> None:
+@pytest.mark.parametrize("origin", [
+    "http://127.0.0.1:5174",
+    "http://localhost:5176",
+    "https://smart-flow-ai-beta.vercel.app",
+])
+def test_cors_allows_frontend_origins(origin: str) -> None:
     response = client.options(
         "/api/health",
         headers={
-            "Origin": "http://127.0.0.1:5174",
+            "Origin": origin,
             "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "content-type",
         },
     )
 
     assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
+    assert response.headers["access-control-allow-origin"] == origin
 
 
 def test_websocket_reports_inactive_state_without_fake_updates() -> None:
@@ -311,8 +317,7 @@ def test_live_traffic_returns_provider_observations_without_invented_counts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "here_api_key", "test-key")
-    monkeypatch.setattr(settings, "supabase_url", "")
-    monkeypatch.setattr(settings, "supabase_service_role_key", "")
+    monkeypatch.setattr(settings, "database_url", "")
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/flow"):
@@ -356,9 +361,7 @@ def test_live_traffic_returns_provider_observations_without_invented_counts(
 def test_intersections_returns_empty_without_configured_catalog(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(settings, "supabase_url", "")
-    monkeypatch.setattr(settings, "supabase_anon_key", "")
-    monkeypatch.setattr(settings, "supabase_service_role_key", "")
+    monkeypatch.setattr(settings, "database_url", "")
 
     response = client.get("/api/traffic/intersections")
 
@@ -386,10 +389,13 @@ def test_database_router_registration_contains_six_read_routes() -> None:
     }
 
     assert database_paths == {
+        "/api/database/health",
         "/api/database/junctions",
         "/api/database/observations",
+        "/api/database/traffic-observations",
         "/api/database/signal-config",
         "/api/database/vehicle-types",
         "/api/database/scenarios",
+        "/api/database/traffic-scenarios",
         "/api/database/scenario-approaches",
     }

@@ -106,10 +106,14 @@ export type TrafficMetric = {
 }
 export type DatabaseTableResponse = {
   table: string
-  source: 'SUPABASE'
-  access: 'ANON_RLS'
+  source: 'NEON_POSTGRESQL'
+  access: 'READ_ONLY'
   row_count: number
   items: Record<string, unknown>[]
+}
+export type DatabaseHealthResponse = {
+  provider: 'NEON_POSTGRESQL'
+  connected: boolean
 }
 export type DatabaseTableKey =
   | 'junctions'

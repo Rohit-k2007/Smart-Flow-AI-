@@ -23,12 +23,13 @@ React app -> FastAPI routers -> Pydantic schemas -> service layer
 - `app/services` contains capability status and domain service boundaries.
   `here_traffic_service.py` makes bounded, on-demand HERE Traffic API v7
   requests, normalizes provider flow and incident fields, and retains original
-  speed units. `supabase_traffic_store.py` persists provider responses and
-  reads the verified Jaipur intersection catalog when server-only Supabase
-  credentials are present.
+  speed units. `neon_database.py` performs parameterized read-only queries
+  against Neon PostgreSQL; `neon_traffic_store.py` reads verified Jaipur
+  intersections and persists provider responses when the existing tables are
+  available.
 - `app/websocket` accepts UUID-formatted run IDs and reports the inactive
   simulation status; it does not stream fabricated updates.
-- `app/simulation`, `app/ai`, and `app/database` are reserved module boundaries.
+- `app/simulation` and `app/ai` are reserved module boundaries.
 
 Emergency requests are explicit user submissions held in process memory only.
 They are neither detected vehicles nor persisted records, and do not apply
@@ -37,10 +38,10 @@ signal priority.
 ## Configuration and future work
 
 `FRONTEND_URL` is a comma-separated allowlist of exact browser origins.
-`APP_ENV` controls logging verbosity. HERE credentials and Supabase service-role
-credentials are read only by the backend. The browser may use the Supabase URL
-and anonymous key for Auth and RLS-protected user preferences; do not put server
-keys in Vite environment variables.
+`APP_ENV` controls logging verbosity. `DATABASE_URL` and HERE credentials are
+backend-only and are never sent to the browser or written to logs. Supabase
+Auth and browser preferences remain a separate frontend integration; do not
+put Neon credentials or server keys in Vite environment variables.
 
 The main dashboard and heatmap use on-demand HERE responses. They do not synthesize
 speed, jam factor, geometry, incidents, vehicle counts, or queues. The attached

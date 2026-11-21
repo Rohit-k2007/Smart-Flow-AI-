@@ -39,11 +39,17 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const onSubmit = async (values: FormValues) => {
     setMessage('')
     setErrorMessage('')
-    const result = mode === 'login'
-      ? await auth.signIn(values.email, values.password ?? '')
-      : mode === 'signup'
-        ? await auth.signUp(values.email, values.password ?? '', values.name?.trim() ?? '')
-        : await auth.resetPassword(values.email)
+    let result
+    try {
+      result = mode === 'login'
+        ? await auth.signIn(values.email, values.password ?? '')
+        : mode === 'signup'
+          ? await auth.signUp(values.email, values.password ?? '', values.name?.trim() ?? '')
+          : await auth.resetPassword(values.email)
+    } catch {
+      setErrorMessage('Account service is unavailable. Public prototype pages remain accessible.')
+      return
+    }
     if (result.error) {
       setErrorMessage(result.error)
       return

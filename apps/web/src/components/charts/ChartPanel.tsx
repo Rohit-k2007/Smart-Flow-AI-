@@ -39,7 +39,7 @@ export function ChartPanel({
           </Chart>
         </ResponsiveContainer>
       </div>
-      <span className="demo-label">DEMO DATA · illustrative only</span>
+      <span className="demo-label">Sample traffic data — illustrative values, not live measurements.</span>
     </Card>
   )
 }

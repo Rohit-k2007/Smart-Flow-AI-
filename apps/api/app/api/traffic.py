@@ -15,7 +15,7 @@ from app.services.here_traffic_service import (
     HereProviderResponse,
     here_traffic_service,
 )
-from app.services.supabase_traffic_store import supabase_traffic_store
+from app.services.neon_traffic_store import neon_traffic_store
 from app.services import traffic_service
 
 router = APIRouter(prefix="/traffic", tags=["traffic"])
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/traffic", tags=["traffic"])
 @router.get("/intersections", response_model=ApiEnvelope[TrafficCollection])
 async def intersections() -> dict[str, object]:
     try:
-        rows = await supabase_traffic_store.get_intersections()
+        rows = await neon_traffic_store.get_intersections()
     except RuntimeError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -82,7 +82,7 @@ async def live_traffic() -> dict[str, object]:
         raise HTTPException(status_code=error_status, detail=str(error)) from error
 
     failure_reason = "; ".join(str(error) for error in failures) or None
-    persistence_status, persistence_reason = await supabase_traffic_store.persist_live_data(
+    persistence_status, persistence_reason = await neon_traffic_store.persist_live_data(
         flow,
         incidents,
         failure_reason,

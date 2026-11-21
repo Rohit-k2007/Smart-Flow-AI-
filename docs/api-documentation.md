@@ -26,6 +26,8 @@ unconfigured simulation/AI control).
 | Method | Path | Behavior |
 |---|---|---|
 | GET | `/api/health` | API health, name, and version |
+| GET | `/api/database/health` | Executes `SELECT 1` against Neon PostgreSQL |
+| GET | `/api/database/junctions`, `/traffic-observations`, `/signal-config`, `/vehicle-types`, `/traffic-scenarios`, `/scenario-approaches` | Read-only Neon table reads; errors distinguish missing tables and permission failures |
 | GET | `/api/integrations/here/status` | HERE configuration and last known provider status; never returns the API key |
 | GET | `/api/integrations/here/health` | Checks HERE flow connectivity independently from backend health |
 | GET | `/api/integrations/here/flow` | Normalized HERE v7 flow segments, source units, geometry, and timestamps |

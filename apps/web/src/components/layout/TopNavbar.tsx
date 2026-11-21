@@ -1,73 +1,139 @@
 import { Bell, ChevronDown, Menu, Moon, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import { useTheme } from '../../contexts/useTheme'
 import { useSimulation } from '../../contexts/useSimulation'
 import { useAuth } from '../../contexts/useAuth'
 import { api } from '../../services/api'
 
-const titles: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/simulation': 'Live Traffic Simulation',
-  '/ai-control': 'AI Control Center',
-  '/emergency': 'Emergency Management',
-  '/heatmap': 'Traffic Heatmap',
-  '/prediction': 'Traffic Prediction',
-  '/analytics': 'Analytics & Reports',
-  '/history': 'Simulation History',
-  '/settings': 'Settings',
-}
+const backendHealthPollMs = 10_000
 
 export function TopNavbar({ onMenu }: { onMenu: () => void }) {
   const [openMenu, setOpenMenu] = useState<'notifications' | 'profile' | null>(null)
   const [backendConnected, setBackendConnected] = useState<boolean | null>(null)
+  const [backendError, setBackendError] = useState('')
+  const [databaseConnected, setDatabaseConnected] = useState<boolean | null>(null)
+  const [databaseError, setDatabaseError] = useState('')
   const [backendSimulation, setBackendSimulation] = useState<string>('checking')
-  const location = useLocation()
   const { theme, toggleTheme } = useTheme()
   const { status } = useSimulation()
   const { configured, user, signOut } = useAuth()
   const [profileError, setProfileError] = useState('')
-  const title = titles[location.pathname] || 'SmartFlow AI'
-
   useEffect(() => {
     let active = true
-    void Promise.all([api.health(), api.simulationStatus()]).then(([health, simulation]) => {
+    let healthTimer: ReturnType<typeof setTimeout> | undefined
+    let databaseTimer: ReturnType<typeof setTimeout> | undefined
+    const checkBackendHealth = async () => {
+      try {
+        const health = await api.health()
+        if (!active) return
+        if (health.ok && health.data.status === 'ok') {
+          setBackendConnected(true)
+          setBackendError('')
+        } else {
+          setBackendConnected(false)
+          setBackendError(
+            health.ok
+              ? `FastAPI reported status "${health.data.status}".`
+              : health.error.message,
+          )
+        }
+      } catch (error) {
+        if (!active) return
+        setBackendConnected(false)
+        setBackendError(
+          error instanceof Error ? error.message : 'The health check failed unexpectedly.',
+        )
+      } finally {
+        if (active) {
+          healthTimer = setTimeout(() => { void checkBackendHealth() }, backendHealthPollMs)
+        }
+      }
+    }
+
+    const checkDatabaseHealth = async () => {
+      try {
+        const health = await api.databaseHealth()
+        if (!active) return
+        if (health.ok && health.data.connected) {
+          setDatabaseConnected(true)
+          setDatabaseError('')
+        } else {
+          setDatabaseConnected(false)
+          setDatabaseError(health.ok ? 'Neon reported disconnected.' : health.error.message)
+        }
+      } catch (error) {
+        if (!active) return
+        setDatabaseConnected(false)
+        setDatabaseError(
+          error instanceof Error ? error.message : 'The database health check failed unexpectedly.',
+        )
+      } finally {
+        if (active) {
+          databaseTimer = setTimeout(() => { void checkDatabaseHealth() }, backendHealthPollMs)
+        }
+      }
+    }
+
+    void checkBackendHealth()
+    void checkDatabaseHealth()
+    void api.simulationStatus().then((simulation) => {
       if (!active) return
-      setBackendConnected(health.ok)
       setBackendSimulation(
         simulation.ok
           ? simulation.data.available ? simulation.data.status : `${simulation.data.status} (not configured)`
           : 'unavailable',
       )
     })
-    return () => { active = false }
+    return () => {
+      active = false
+      if (healthTimer) clearTimeout(healthTimer)
+      if (databaseTimer) clearTimeout(databaseTimer)
+    }
   }, [])
 
   const connectionClass = backendConnected === null
     ? 'backend-checking'
     : backendConnected ? 'backend-connected' : 'backend-disconnected'
+  const connectionTitle = backendConnected
+    ? 'FastAPI health check succeeded.'
+    : backendConnected === null
+      ? 'Checking FastAPI health.'
+      : `FastAPI health check failed: ${backendError || 'Unknown error.'}`
+  const databaseClass = databaseConnected === null
+    ? 'backend-checking'
+    : databaseConnected ? 'backend-connected' : 'backend-disconnected'
+  const databaseTitle = databaseConnected
+    ? 'Neon database health check succeeded.'
+    : databaseConnected === null
+      ? 'Checking Neon database health.'
+      : `Neon database health check failed: ${databaseError || 'Unknown error.'}`
+  const simulationStatusClass = backendSimulation === 'checking'
+    ? 'backend-checking'
+    : backendSimulation === 'unavailable' || backendSimulation.includes('not configured')
+      ? 'status-informational'
+      : 'backend-connected'
 
   return (
     <header className="topbar">
       <button className="icon-button mobile-menu" aria-label="Open navigation" onClick={onMenu}>
         <Menu size={20} />
       </button>
-      <div className="page-context">
-        <span>Operations</span>
-        <strong>{title}</strong>
-      </div>
       <div className="topbar-actions">
-        <div className={`connection-status ${connectionClass}`} title={backendConnected ? 'FastAPI health check succeeded.' : backendConnected === null ? 'Checking FastAPI health.' : 'FastAPI is unavailable.'}>
+        <div className={`connection-status ${connectionClass}`} role="status" aria-label={connectionTitle} title={connectionTitle}>
           <span className="status-dot" />
           <span>Backend: {backendConnected ? 'connected' : backendConnected === null ? 'checking' : 'disconnected'}</span>
         </div>
-        <div className={`connection-status ${backendSimulation === 'checking' ? 'backend-checking' : backendSimulation === 'unavailable' || backendSimulation.includes('not configured') ? 'backend-disconnected' : 'backend-connected'}`} title="Actual backend simulation state; separate from the local frontend demo.">
+        <div className={`connection-status ${databaseClass}`} role="status" aria-label={databaseTitle} title={databaseTitle}>
           <span className="status-dot" />
-          <span>API simulation: {backendSimulation}</span>
+          <span>Database: {databaseConnected ? 'connected' : databaseConnected === null ? 'checking' : 'disconnected'}</span>
+        </div>
+        <div className={`connection-status ${simulationStatusClass}`} title="Backend simulation status is separate from the local prototype.">
+          <span className="status-dot" />
+          <span>AI simulation: {backendSimulation}</span>
         </div>
         <div className="simulation-status">
-          <span>Demo simulation</span>
+          <span>Prototype Mode</span>
           <strong>{status}</strong>
         </div>
         <button className="icon-button" aria-label="Notifications" aria-expanded={openMenu === 'notifications'} onClick={() => setOpenMenu(openMenu === 'notifications' ? null : 'notifications')}>
@@ -91,7 +157,7 @@ export function TopNavbar({ onMenu }: { onMenu: () => void }) {
             : user?.email ?? (configured ? 'Public access · sign in to save preferences.' : 'Public access · account features are not configured.')}</p>
           {profileError && <p role="alert">{profileError}</p>}
           {openMenu === 'profile' && user
-            ? <button onClick={() => { void signOut().then((result) => { if (result.error) setProfileError(result.error); else { setProfileError(''); setOpenMenu(null) } }) }}>Sign out</button>
+            ? <button onClick={() => { void signOut().then((result) => { if (result.error) setProfileError(result.error); else { setProfileError(''); setOpenMenu(null) } }).catch(() => setProfileError('Sign-out is unavailable; try again when account services recover.')) }}>Sign out</button>
             : openMenu === 'profile' && configured
               ? <Link to="/login" onClick={() => setOpenMenu(null)}>Sign in</Link>
               : <button onClick={() => setOpenMenu(null)}>Dismiss</button>}

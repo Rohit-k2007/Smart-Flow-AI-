@@ -1,42 +1,70 @@
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 
 from app.schemas.common import ApiEnvelope, success_response
-from app.services.supabase_read_client import SupabaseReadError, supabase_read_client
+from app.services.neon_database import NeonDatabaseError, neon_database_client
 
 router = APIRouter(prefix="/database", tags=["database"])
 
 
 class DatabaseTableData(BaseModel):
     table: str
-    source: Literal["SUPABASE"]
-    access: Literal["ANON_RLS"]
+    source: Literal["NEON_POSTGRESQL"]
+    access: Literal["READ_ONLY"]
     row_count: int
     items: list[dict[str, Any]]
 
 
-async def _read_table(table: str) -> dict[str, object]:
+class DatabaseHealthData(BaseModel):
+    provider: Literal["NEON_POSTGRESQL"]
+    connected: bool
+
+
+def _database_http_error(exc: NeonDatabaseError) -> HTTPException:
+    if exc.category == "table_not_found":
+        code = status.HTTP_404_NOT_FOUND
+    elif exc.category == "permission_denied":
+        code = status.HTTP_403_FORBIDDEN
+    elif exc.category in {
+        "not_configured",
+        "invalid_configuration",
+        "connection_error",
+        "authentication_failed",
+    }:
+        code = status.HTTP_503_SERVICE_UNAVAILABLE
+    else:
+        code = status.HTTP_502_BAD_GATEWAY
+    return HTTPException(status_code=code, detail=f"{exc.category}: {exc}")
+
+
+@router.get("/health", response_model=ApiEnvelope[DatabaseHealthData])
+async def database_health() -> dict[str, object]:
     try:
-        items = await supabase_read_client.get_rows(table)
-    except SupabaseReadError as exc:
-        code = (
-            status.HTTP_503_SERVICE_UNAVAILABLE
-            if exc.category == "not_configured"
-            else status.HTTP_502_BAD_GATEWAY
-        )
-        detail = f"{exc.category}: {exc}"
-        if exc.upstream_status is not None:
-            detail = f"{detail} (upstream HTTP {exc.upstream_status})"
-        raise HTTPException(status_code=code, detail=detail) from exc
+        connected = await neon_database_client.check_connection()
+    except NeonDatabaseError as exc:
+        raise _database_http_error(exc) from exc
 
     return success_response(
-        f"Read-only {table} records retrieved from Supabase.",
+        "Neon PostgreSQL connection verified.",
+        DatabaseHealthData(provider="NEON_POSTGRESQL", connected=connected),
+    )
+
+
+async def _read_table(table: str) -> dict[str, object]:
+    try:
+        items = jsonable_encoder(await neon_database_client.get_rows(table))
+    except NeonDatabaseError as exc:
+        raise _database_http_error(exc) from exc
+
+    return success_response(
+        f"Read-only {table} records retrieved from Neon PostgreSQL.",
         DatabaseTableData(
             table=table,
-            source="SUPABASE",
-            access="ANON_RLS",
+            source="NEON_POSTGRESQL",
+            access="READ_ONLY",
             row_count=len(items),
             items=items,
         ),
@@ -53,6 +81,11 @@ async def observations() -> dict[str, object]:
     return await _read_table("traffic_observations")
 
 
+@router.get("/traffic-observations", response_model=ApiEnvelope[DatabaseTableData])
+async def traffic_observations() -> dict[str, object]:
+    return await _read_table("traffic_observations")
+
+
 @router.get("/signal-config", response_model=ApiEnvelope[DatabaseTableData])
 async def signal_config() -> dict[str, object]:
     return await _read_table("signal_config")
@@ -65,6 +98,11 @@ async def vehicle_types() -> dict[str, object]:
 
 @router.get("/scenarios", response_model=ApiEnvelope[DatabaseTableData])
 async def scenarios() -> dict[str, object]:
+    return await _read_table("traffic_scenarios")
+
+
+@router.get("/traffic-scenarios", response_model=ApiEnvelope[DatabaseTableData])
+async def traffic_scenarios() -> dict[str, object]:
     return await _read_table("traffic_scenarios")
 
 

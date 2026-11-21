@@ -4,6 +4,7 @@ import type {
   AIStatus,
   AvailableCollection,
   DashboardSummary,
+  DatabaseHealthResponse,
   DatabaseTableResponse,
   EmergencyEvent,
   EmergencyRequest,
@@ -77,6 +78,7 @@ async function request<T>(method: 'get' | 'post', url: string, data?: unknown, t
 
 export const api = {
   health: () => request<HealthResponse>('get', '/api/health'),
+  databaseHealth: () => request<DatabaseHealthResponse>('get', '/api/database/health'),
   dashboardSummary: () => request<DashboardSummary>('get', '/api/dashboard/summary'),
   hereStatus: () => request<HereIntegrationStatus>('get', '/api/integrations/here/status'),
   liveTraffic: () => request<TrafficLiveResponse>('get', '/api/traffic/live', undefined, 25000),

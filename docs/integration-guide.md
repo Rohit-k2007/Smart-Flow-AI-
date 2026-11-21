@@ -2,23 +2,23 @@
 
 ## Configure and start
 
-1. Apply `supabase/migrations` using the Supabase CLI and run
-   `supabase test db` in a local Supabase environment.
-2. Configure backend values in `apps/api/.env`: `HERE_API_KEY`,
-   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `FRONTEND_URL` with port
-   `5174`. Keep the service-role key server-only.
-3. Configure `apps/web/.env.local` with
+1. Configure backend values in `apps/api/.env`: `HERE_API_KEY`,
+   `DATABASE_URL` for Neon PostgreSQL, and `FRONTEND_URL`. Existing Supabase
+   migrations are retained and are not automatically applied to Neon.
+2. Configure `apps/web/.env.local` with
    `VITE_API_URL=http://localhost:8001`, `VITE_SUPABASE_URL`, and
    `VITE_SUPABASE_ANON_KEY`. The browser anonymous key is intended for public
-   clients and is constrained by RLS.
-4. Start FastAPI from `apps/api`, then Vite from `apps/web` with `npm run dev`.
-5. `/api/health` reports backend health; `/api/integrations/here/status`
+   Supabase Auth and preference clients; it is not used for backend table
+   reads. Never put the Neon URL in the frontend.
+3. Start FastAPI from `apps/api`, then Vite from `apps/web` with `npm run dev`.
+4. `/api/health` reports backend health, while `/api/database/health` verifies
+   Neon with `SELECT 1`. `/api/integrations/here/status`
    reports provider configuration. Dashboard data is fetched on demand from
    `/api/traffic/live` and can be manually refreshed; there is no poller.
 
 FastAPI allows only the configured `FRONTEND_URL` origins. Keep this value
-aligned with the frontend's actual browser origin. Never place HERE or
-Supabase service-role credentials in Vite environment variables.
+aligned with the frontend's actual browser origin. Never place HERE or Neon
+credentials in Vite environment variables.
 
 ## API client contract
 
