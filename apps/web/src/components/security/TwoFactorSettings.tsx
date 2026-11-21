@@ -34,7 +34,9 @@ export function TwoFactorSettings() {
       const { data, error: listError } = await supabase.auth.mfa.listFactors()
       if (listError) throw listError
       const verified = data.totp.find((factor) => factor.status === 'verified')
-      const pending = data.totp.find((factor) => factor.status === 'unverified')
+      const pending = data.all.find(
+        (factor) => factor.factor_type === 'totp' && factor.status === 'unverified',
+      )
       setVerifiedFactor(verified ? { id: verified.id, name: verified.friendly_name ?? null } : null)
       setPendingFactorId(pending?.id ?? null)
       setFactorState(verified ? 'verified' : pending ? 'pending' : 'none')
@@ -225,7 +227,7 @@ export function TwoFactorSettings() {
             </Button>
           )}
           {factorState === 'none' && !enrollment && (
-            <Button type="button" disabled={busy || factorState === 'loading'} onClick={() => void enroll()}>
+            <Button type="button" disabled={busy} onClick={() => void enroll()}>
               {busy ? 'Starting…' : 'Enable Two-Factor Authentication'}
             </Button>
           )}
